@@ -15,6 +15,8 @@ Almari is a lightweight, easy-to-deploy web application designed to manage a mac
   - Multipart file uploads.
   - File downloads & directory downloads (auto-zipped on the fly).
   - Secure deletion of files and directories.
+- **Media Viewer:** In-browser modal viewer for images and videos with buffered HTTP Range streaming.
+- **Thumbnails:** Automatically generated image and video thumbnails with caching. Video thumbnails require `ffmpeg` (falls back to a placeholder if unavailable).
 - **Security:** Robust path sanitization to prevent path traversal attacks (`../` escapes).
 
 ---
@@ -23,6 +25,10 @@ Almari is a lightweight, easy-to-deploy web application designed to manage a mac
 
 ### Prerequisites
 - Go 1.21+ (for building from source)
+- **Optional:** `ffmpeg` — recommended for video thumbnail generation. If not installed, Almari generates a styled placeholder thumbnail instead.
+  - **macOS:** `brew install ffmpeg`
+  - **Ubuntu/Debian:** `sudo apt install ffmpeg`
+  - **Windows:** Download from [ffmpeg.org](https://ffmpeg.org/download.html)
 
 ### Build & Run
 ```bash

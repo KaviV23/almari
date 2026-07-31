@@ -170,3 +170,37 @@ func TestServerHandlers(t *testing.T) {
 		t.Errorf("expected newfile.txt to be deleted")
 	}
 }
+
+func TestThumbnailGeneration(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "almari_test_*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	videoPath := filepath.Join(tmpDir, "test.mp4")
+	if err := os.WriteFile(videoPath, []byte("fake video content"), 0644); err != nil {
+		t.Fatalf("failed to write test video: %v", err)
+	}
+
+	srv, err := NewServer(tmpDir)
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/thumb", srv.HandleThumbnail)
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/api/thumb?path=/test.mp4")
+	if err != nil {
+		t.Fatalf("failed to GET /api/thumb: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200 for video thumbnail fallback, got %d", resp.StatusCode)
+	}
+}

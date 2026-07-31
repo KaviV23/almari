@@ -33,6 +33,7 @@ func main() {
 	mux.HandleFunc("/api/delete", srv.HandleDelete)
 	mux.HandleFunc("/api/upload", srv.HandleUpload)
 	mux.HandleFunc("/api/download", srv.HandleDownload)
+	mux.HandleFunc("/api/thumbnail", srv.HandleThumbnail)
 
 	// Static UI Routes
 	subFS, err := fs.Sub(staticFiles, "static")
