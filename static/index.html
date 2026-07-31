@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Almari - Filesystem Manager</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col font-sans" x-data="fileManager()">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center space-x-3">
+            <div class="bg-indigo-600 p-2 rounded-lg text-white">
+                <i data-lucide="hard-drive" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-white">Almari</h1>
+                <p class="text-xs text-gray-400">Remote Filesystem Manager</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3">
+            <button @click="openMkdirModal()" class="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow">
+                <i data-lucide="folder-plus" class="w-4 h-4"></i>
+                <span>New Folder</span>
+            </button>
+            <label class="flex items-center space-x-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer shadow">
+                <i data-lucide="upload" class="w-4 h-4"></i>
+                <span>Upload Files</span>
+                <input type="file" multiple @change="uploadFiles" class="hidden">
+            </label>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 flex flex-col space-y-4">
+
+        <!-- Breadcrumbs & Path Bar -->
+        <div class="bg-gray-800 border border-gray-700 px-4 py-3 rounded-xl flex items-center justify-between shadow">
+            <div class="flex items-center space-x-2 overflow-x-auto text-sm">
+                <button @click="loadDir('/')" class="text-indigo-400 hover:text-indigo-300 font-semibold flex items-center space-x-1">
+                    <i data-lucide="home" class="w-4 h-4"></i>
+                    <span>/</span>
+                </button>
+                <template x-for="(segment, index) in breadcrumbs" :key="index">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-gray-500">/</span>
+                        <button @click="navigateToBreadcrumb(index)" class="hover:text-indigo-300 text-gray-300 font-medium" x-text="segment"></button>
+                    </div>
+                </template>
+            </div>
+            <div class="text-xs text-gray-400">
+                <span x-text="files.length"></span> items
+            </div>
+        </div>
+
+        <!-- File Table / Browser -->
+        <div class="bg-gray-800 border border-gray-700 rounded-xl shadow overflow-hidden flex-1 flex flex-col">
+            <div class="overflow-x-auto flex-1">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-750 border-b border-gray-700 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                            <th class="py-3 px-6">Name</th>
+                            <th class="py-3 px-6">Size</th>
+                            <th class="py-3 px-6">Permissions</th>
+                            <th class="py-3 px-6">Modified</th>
+                            <th class="py-3 px-6 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700 text-sm">
+                        <!-- Loading State -->
+                        <template x-if="loading">
+                            <tr>
+                                <td colspan="5" class="py-12 text-center text-gray-400">
+                                    <div class="flex justify-center items-center space-x-2">
+                                        <i data-lucide="loader" class="w-5 h-5 animate-spin text-indigo-500"></i>
+                                        <span>Loading directory contents...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+
+                        <!-- Empty State -->
+                        <template x-if="!loading && files.length === 0">
+                            <tr>
+                                <td colspan="5" class="py-12 text-center text-gray-500">
+                                    This directory is empty.
+                                </td>
+                            </tr>
+                        </template>
+
+                        <!-- File Rows -->
+                        <template x-for="file in files" :key="file.path">
+                            <tr class="hover:bg-gray-700/50 transition group">
+                                <td class="py-3 px-6 align-middle">
+                                    <div class="flex items-center space-x-3">
+                                        <template x-if="file.isDir">
+                                            <i data-lucide="folder" class="w-5 h-5 text-amber-400 flex-shrink-0"></i>
+                                        </template>
+                                        <template x-if="!file.isDir">
+                                            <i data-lucide="file" class="w-5 h-5 text-indigo-400 flex-shrink-0"></i>
+                                        </template>
+                                        <button @click="file.isDir ? loadDir(file.path) : openFile(file)" class="font-medium text-gray-200 hover:text-indigo-400 text-left truncate max-w-xs" x-text="file.name"></button>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-6 align-middle text-gray-400 text-xs" x-text="file.isDir ? '-' : formatSize(file.size)"></td>
+                                <td class="py-3 px-6 align-middle text-gray-400 font-mono text-xs" x-text="file.mode"></td>
+                                <td class="py-3 px-6 align-middle text-gray-400 text-xs" x-text="formatDate(file.modTime)"></td>
+                                <td class="py-3 px-6 align-middle">
+                                    <div class="flex items-center justify-end space-x-2">
+                                        <a :href="'/api/download?path=' + encodeURIComponent(file.path)" download class="text-gray-400 hover:text-indigo-400 p-1 rounded transition inline-flex items-center" title="Download">
+                                            <i data-lucide="download" class="w-4 h-4"></i>
+                                        </a>
+                                        <button @click="deleteItem(file.path)" class="text-gray-400 hover:text-red-400 p-1 rounded transition inline-flex items-center" title="Delete">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal: New Directory -->
+    <div x-show="showMkdirModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50" x-cloak>
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+            <h3 class="text-lg font-bold text-white">Create New Folder</h3>
+            <input type="text" x-model="newFolderName" placeholder="Folder name" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500">
+            <div class="flex justify-end space-x-3">
+                <button @click="showMkdirModal = false" class="px-4 py-2 rounded-lg text-gray-400 hover:bg-gray-700 text-sm">Cancel</button>
+                <button @click="createFolder()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: File Viewer / Editor -->
+    <div x-show="showEditorModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50" x-cloak>
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 w-full max-w-4xl h-[80vh] shadow-2xl flex flex-col space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-700 pb-3">
+                <h3 class="text-lg font-bold text-white truncate" x-text="currentFile ? currentFile.name : 'Editor'"></h3>
+                <button @click="showEditorModal = false" class="text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <textarea x-model="fileContent" class="flex-1 w-full bg-gray-900 border border-gray-700 rounded-lg p-4 font-mono text-sm text-gray-200 focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+            <div class="flex justify-end space-x-3">
+                <button @click="showEditorModal = false" class="px-4 py-2 rounded-lg text-gray-400 hover:bg-gray-700 text-sm">Close</button>
+                <button @click="saveFile()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alpine.js Application Logic -->
+    <script>
+        function fileManager() {
+            return {
+                currentPath: '/',
+                files: [],
+                breadcrumbs: [],
+                loading: false,
+                showMkdirModal: false,
+                newFolderName: '',
+                showEditorModal: false,
+                currentFile: null,
+                fileContent: '',
+
+                init() {
+                    this.loadDir('/');
+                },
+
+                async loadDir(path) {
+                    this.loading = true;
+                    this.currentPath = path;
+                    this.updateBreadcrumbs(path);
+
+                    try {
+                        const res = await fetch(`/api/list?path=${encodeURIComponent(path)}`);
+                        if (res.ok) {
+                            this.files = await res.json();
+                        } else {
+                            alert('Failed to load directory');
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        alert('Network error');
+                    } finally {
+                        this.loading = false;
+                        this.$nextTick(() => lucide.createIcons());
+                    }
+                },
+
+                updateBreadcrumbs(path) {
+                    if (path === '/' || path === '') {
+                        this.breadcrumbs = [];
+                    } else {
+                        this.breadcrumbs = path.split('/').filter(Boolean);
+                    }
+                },
+
+                navigateToBreadcrumb(index) {
+                    const targetPath = '/' + this.breadcrumbs.slice(0, index + 1).join('/');
+                    this.loadDir(targetPath);
+                },
+
+                formatSize(bytes) {
+                    if (bytes === 0) return '0 B';
+                    const k = 1024;
+                    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                },
+
+                formatDate(timestamp) {
+                    return new Date(timestamp).toLocaleString();
+                },
+
+                openMkdirModal() {
+                    this.newFolderName = '';
+                    this.showMkdirModal = true;
+                },
+
+                async createFolder() {
+                    if (!this.newFolderName) return;
+                    const target = (this.currentPath === '/' ? '' : this.currentPath) + '/' + this.newFolderName;
+                    
+                    try {
+                        const res = await fetch('/api/mkdir', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ path: target })
+                        });
+                        if (res.ok) {
+                            this.showMkdirModal = false;
+                            this.loadDir(this.currentPath);
+                        } else {
+                            alert('Failed to create folder');
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                },
+
+                async deleteItem(path) {
+                    if (!confirm(`Are you sure you want to delete ${path}?`)) return;
+
+                    try {
+                        const res = await fetch(`/api/delete?path=${encodeURIComponent(path)}`, {
+                            method: 'DELETE'
+                        });
+                        if (res.ok) {
+                            this.loadDir(this.currentPath);
+                        } else {
+                            alert('Failed to delete item');
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                },
+
+                async uploadFiles(event) {
+                    const files = event.target.files;
+                    if (!files.length) return;
+
+                    const formData = new FormData();
+                    formData.append('path', this.currentPath);
+                    for (let i = 0; i < files.length; i++) {
+                        formData.append('files', files[i]);
+                    }
+
+                    try {
+                        const res = await fetch('/api/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (res.ok) {
+                            this.loadDir(this.currentPath);
+                        } else {
+                            alert('Failed to upload files');
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                    event.target.value = '';
+                },
+
+                async openFile(file) {
+                    this.currentFile = file;
+                    try {
+                        const res = await fetch(`/api/read?path=${encodeURIComponent(file.path)}`);
+                        if (res.ok) {
+                            this.fileContent = await res.text();
+                            this.showEditorModal = true;
+                        } else {
+                            alert('Failed to read file');
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                },
+
+                async saveFile() {
+                    if (!this.currentFile) return;
+
+                    try {
+                        const res = await fetch('/api/write', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                path: this.currentFile.path,
+                                content: this.fileContent
+                            })
+                        });
+                        if (res.ok) {
+                            alert('File saved successfully');
+                            this.showEditorModal = false;
+                        } else {
+                            alert('Failed to save file');
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
