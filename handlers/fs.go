@@ -7,10 +7,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"image/color"
 	"image/jpeg"
 	_ "image/gif"
 	_ "image/png"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -512,5 +514,37 @@ func generateVideoThumb(srcPath, dstPath string, width, height int) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("ffmpeg not available or failed to generate video thumbnail")
+	// Fallback to pure Go styled placeholder thumbnail if ffmpeg is unavailable or fails
+	return generatePlaceholderThumb(dstPath, width, height)
+}
+
+func generatePlaceholderThumb(dstPath string, width, height int) error {
+	dst := image.NewRGBA(image.Rect(0, 0, width, height))
+	bgCol := color.RGBA{30, 41, 59, 255} // slate-800
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			dst.Set(x, y, bgCol)
+		}
+	}
+
+	// Draw a play button triangle
+	cx, cy := width/2, height/2
+	halfSize := 35
+	for y := cy - halfSize; y <= cy + halfSize; y++ {
+		for x := cx - halfSize/2; x <= cx + halfSize; x++ {
+			dx := float64(x - (cx - halfSize/2))
+			dy := float64(y - cy)
+			if dx >= 0 && dx <= float64(halfSize)*1.5 && math.Abs(dy) <= dx*0.75 {
+				dst.Set(x, y, color.RGBA{255, 255, 255, 230})
+			}
+		}
+	}
+
+	out, err := os.Create(dstPath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	return jpeg.Encode(out, dst, &jpeg.Options{Quality: 80})
 }
