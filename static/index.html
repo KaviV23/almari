@@ -211,6 +211,29 @@
         </div>
     </div>
 
+    <!-- Modal: Media Viewer (Images & Buffered Videos) -->
+    <div x-show="showMediaModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50" x-cloak>
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 w-full max-w-5xl shadow-2xl flex flex-col space-y-4 max-h-[90vh]">
+            <div class="flex items-center justify-between border-b border-gray-700 pb-3">
+                <h3 class="text-lg font-bold text-white truncate" x-text="currentFile ? currentFile.name : 'Media Viewer'"></h3>
+                <button @click="closeMediaModal()" class="text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="flex-1 flex items-center justify-center overflow-hidden bg-black/60 rounded-xl p-2 min-h-[350px]">
+                <template x-if="currentFile && isImage(currentFile.name)">
+                    <img :src="'/api/download?path=' + encodeURIComponent(currentFile.path)" class="max-h-[70vh] max-w-full object-contain rounded-lg">
+                </template>
+                <template x-if="currentFile && isVideo(currentFile.name)">
+                    <video controls preload="metadata" :src="'/api/download?path=' + encodeURIComponent(currentFile.path)" class="max-h-[70vh] max-w-full rounded-lg shadow-lg"></video>
+                </template>
+            </div>
+            <div class="flex justify-end">
+                <button @click="closeMediaModal()" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Alpine.js Application Logic -->
     <script>
         function fileManager() {
@@ -223,6 +246,7 @@
                 showMkdirModal: false,
                 newFolderName: '',
                 showEditorModal: false,
+                showMediaModal: false,
                 currentFile: null,
                 fileContent: '',
 
@@ -345,8 +369,21 @@
                     event.target.value = '';
                 },
 
-                async openFile(file) {
+                openFile(file) {
                     this.currentFile = file;
+                    const name = file.name.toLowerCase();
+                    const isImg = this.isImage(file.name);
+                    const isVideo = this.isVideo(file.name);
+
+                    if (isImg || isVideo) {
+                        this.showMediaModal = true;
+                        this.$nextTick(() => lucide.createIcons());
+                    } else {
+                        this.loadTextFile(file);
+                    }
+                },
+
+                async loadTextFile(file) {
                     try {
                         const res = await fetch(`/api/read?path=${encodeURIComponent(file.path)}`);
                         if (res.ok) {
@@ -358,6 +395,22 @@
                     } catch (e) {
                         console.error(e);
                     }
+                },
+
+                isImage(filename) {
+                    const name = filename.toLowerCase();
+                    return name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif') || name.endsWith('.webp');
+                },
+
+                isVideo(filename) {
+                    const name = filename.toLowerCase();
+                    return name.endsWith('.mp4') || name.endsWith('.mkv') || name.endsWith('.mov') || name.endsWith('.webm') || name.endsWith('.avi');
+                },
+
+                closeMediaModal() {
+                    this.showMediaModal = false;
+                    const videoEl = document.querySelector('video');
+                    if (videoEl) videoEl.pause();
                 },
 
                 async saveFile() {
