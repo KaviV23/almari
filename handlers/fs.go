@@ -2,10 +2,18 @@ package handlers
 
 import (
 	"archive/zip"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"image"
+	"image/jpeg"
+	_ "image/gif"
+	_ "image/png"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -13,12 +21,13 @@ import (
 
 // FileInfo represents metadata about a file or directory.
 type FileInfo struct {
-	Name    string `json:"name"`
-	Path    string `json:"path"`
-	Size    int64  `json:"size"`
-	IsDir   bool   `json:"isDir"`
-	ModTime int64  `json:"modTime"`
-	Mode    string `json:"mode"`
+	Name     string `json:"name"`
+	Path     string `json:"path"`
+	Size     int64  `json:"size"`
+	IsDir    bool   `json:"isDir"`
+	ModTime  int64  `json:"modTime"`
+	Mode     string `json:"mode"`
+	HasThumb bool   `json:"hasThumb"`
 }
 
 // Server holds the configuration for the filesystem manager server.
@@ -107,13 +116,19 @@ func (s *Server) HandleList(w http.ResponseWriter, r *http.Request) {
 		rel, _ := filepath.Rel(s.RootPath, childFullPath)
 		relPath := "/" + filepath.ToSlash(rel)
 
+		ext := strings.ToLower(filepath.Ext(entry.Name()))
+		isImg := ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".webp"
+		isVideo := ext == ".mp4" || ext == ".mkv" || ext == ".mov" || ext == ".webm" || ext == ".avi"
+		hasThumb := !entry.IsDir() && (isImg || isVideo)
+
 		files = append(files, FileInfo{
-			Name:    entry.Name(),
-			Path:    relPath,
-			Size:    info.Size(),
-			IsDir:   entry.IsDir(),
-			ModTime: info.ModTime().UnixMilli(),
-			Mode:    info.Mode().String(),
+			Name:     entry.Name(),
+			Path:     relPath,
+			Size:     info.Size(),
+			IsDir:    entry.IsDir(),
+			ModTime:  info.ModTime().UnixMilli(),
+			Mode:     info.Mode().String(),
+			HasThumb: hasThumb,
 		})
 	}
 
@@ -282,7 +297,6 @@ func (s *Server) HandleUpload(w http.ResponseWriter, r *http.Request) {
 		defer f.Close()
 
 		destFilePath := filepath.Join(targetDir, fh.Filename)
-		// Ensure file stays within targetDir
 		if !strings.HasPrefix(destFilePath, targetDir) {
 			continue
 		}
@@ -375,4 +389,128 @@ func (s *Server) HandleDownload(w http.ResponseWriter, r *http.Request) {
 		_, err = io.Copy(writer, file)
 		return err
 	})
+}
+
+// HandleThumbnail serves cached or generated thumbnails for images and videos.
+func (s *Server) HandleThumbnail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	reqPath := r.URL.Query().Get("path")
+	target, err := s.resolvePath(reqPath)
+	if err != nil {
+		http.Error(w, "Access denied", http.StatusBadRequest)
+		return
+	}
+
+	info, err := os.Stat(target)
+	if err != nil || info.IsDir() {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+	// Cache directory setup in OS UserCacheDir or TempDir
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		cacheDir = os.TempDir()
+	}
+	thumbDir := filepath.Join(cacheDir, "almari", "thumbnails")
+	os.MkdirAll(thumbDir, 0755)
+
+	// Unique cache key based on absolute path and modification time
+	hasher := sha256.New()
+	hasher.Write([]byte(target))
+	hasher.Write([]byte(fmt.Sprintf("%d", info.ModTime().UnixNano())))
+	cacheKey := hex.EncodeToString(hasher.Sum(nil)) + ".jpg"
+	cacheFilePath := filepath.Join(thumbDir, cacheKey)
+
+	// Serve from cache if exists
+	if cachedInfo, err := os.Stat(cacheFilePath); err == nil && !cachedInfo.IsDir() {
+		http.ServeFile(w, r, cacheFilePath)
+		return
+	}
+
+	// Generate thumbnail
+	ext := strings.ToLower(filepath.Ext(target))
+	isImg := ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".webp"
+	isVideo := ext == ".mp4" || ext == ".mkv" || ext == ".mov" || ext == ".webm" || ext == ".avi"
+
+	var genErr error
+	if isImg {
+		genErr = generateImageThumb(target, cacheFilePath, 250, 250)
+	} else if isVideo {
+		genErr = generateVideoThumb(target, cacheFilePath, 250, 250)
+	} else {
+		http.Error(w, "Unsupported file type", http.StatusBadRequest)
+		return
+	}
+
+	if genErr != nil {
+		http.Error(w, "Failed to generate thumbnail: "+genErr.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.ServeFile(w, r, cacheFilePath)
+}
+
+func generateImageThumb(srcPath, dstPath string, maxWidth, maxHeight int) error {
+	file, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	img, _, err := image.Decode(file)
+	if err != nil {
+		return err
+	}
+
+	bounds := img.Bounds()
+	srcW := bounds.Dx()
+	srcH := bounds.Dy()
+
+	// Calculate aspect ratio
+	w := maxWidth
+	h := maxHeight
+	if srcW > srcH {
+		h = int(float64(srcH) * float64(maxWidth) / float64(srcW))
+	} else {
+		w = int(float64(srcW) * float64(maxHeight) / float64(srcH))
+	}
+	if w < 1 {
+		w = 1
+	}
+	if h < 1 {
+		h = 1
+	}
+
+	// Pure Go nearest-neighbor scaling
+	dst := image.NewRGBA(image.Rect(0, 0, w, h))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			srcX := bounds.Min.X + (x*srcW)/w
+			srcY := bounds.Min.Y + (y*srcH)/h
+			dst.Set(x, y, img.At(srcX, srcY))
+		}
+	}
+
+	out, err := os.Create(dstPath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	return jpeg.Encode(out, dst, &jpeg.Options{Quality: 80})
+}
+
+func generateVideoThumb(srcPath, dstPath string, width, height int) error {
+	cmd := exec.Command("ffmpeg", "-ss", "00:00:01", "-i", srcPath, "-vframes", "1", "-vf", fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=decrease", width, height), "-f", "image2", dstPath)
+	if err := cmd.Run(); err == nil {
+		if _, err := os.Stat(dstPath); err == nil {
+			return nil
+		}
+	}
+	return fmt.Errorf("ffmpeg not available or failed to generate video thumbnail")
 }
