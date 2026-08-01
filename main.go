@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/KaviV23/almari/handlers"
 )
@@ -35,13 +36,28 @@ func main() {
 	mux.HandleFunc("/api/download", srv.HandleDownload)
 	mux.HandleFunc("/api/thumbnail", srv.HandleThumbnail)
 
-	// Static UI Routes
+	// Static UI Routes - SPA fallback
 	subFS, err := fs.Sub(staticFiles, "static")
 	if err != nil {
 		log.Fatalf("Failed to create sub filesystem: %v", err)
 	}
 	fileServer := http.FileServer(http.FS(subFS))
-	mux.Handle("/", fileServer)
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// API routes are handled above, this is for SPA
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			http.NotFound(w, r)
+			return
+		}
+
+		// Try to serve the file
+		_, err := subFS.Open(strings.TrimPrefix(r.URL.Path, "/"))
+		if err != nil {
+			// Fallback to index.html for SPA routing
+			r.URL.Path = "/"
+		}
+		fileServer.ServeHTTP(w, r)
+	})
 
 	log.Printf("Starting Almari server on http://localhost:%s", *port)
 	log.Printf("Managing filesystem root: %s", srv.RootPath)
