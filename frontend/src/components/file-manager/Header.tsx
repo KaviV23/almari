@@ -1,11 +1,11 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FolderPlus, Upload, HardDrive } from 'lucide-react'
+import { FolderPlus, Upload, HardDrive, Trash2 } from 'lucide-react'
 import { useFileManagerContext } from '@/context/FileManagerContext'
 
 export function Header() {
-  const { openMkdirModal, uploadFiles } = useFileManagerContext()
+  const { openMkdirModal, uploadFiles, openDeleteListModal, pendingDeletions } = useFileManagerContext()
 
   return (
     <header className="bg-background border-b border-border p-2 flex items-center justify-between shadow-md">
@@ -28,6 +28,12 @@ export function Header() {
           <span>Upload Files</span>
           <Input type="file" multiple onChange={uploadFiles} className="hidden" />
         </Label>
+        {pendingDeletions.length > 0 && (
+          <Button variant="destructive" onClick={openDeleteListModal} className="bg-red-600 hover:bg-red-700">
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete List ({pendingDeletions.length})
+          </Button>
+        )}
       </div>
     </header>
   )

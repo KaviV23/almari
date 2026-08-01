@@ -18,6 +18,9 @@ export interface FileManagerState {
   newFolderName: string
   showEditorModal: boolean
   showMediaModal: boolean
+  showDeleteListModal: boolean
   currentFile: FileItem | null
   fileContent: string
+  selectedFiles: string[]
+  pendingDeletions: string[]
 }

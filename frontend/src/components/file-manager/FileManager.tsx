@@ -5,6 +5,7 @@ import { FileGrid } from './FileGrid'
 import { MkdirModal } from './MkdirModal'
 import { EditorModal } from './EditorModal'
 import { MediaModal } from './MediaModal'
+import { DeleteListModal } from './DeleteListModal'
 import { FileManagerProvider, useFileManagerContext } from '@/context/FileManagerContext'
 
 function FileManagerContent() {
@@ -28,6 +29,7 @@ function FileManagerContent() {
       <MkdirModal />
       <EditorModal />
       <MediaModal />
+      <DeleteListModal />
     </div>
   )
 }

@@ -1,12 +1,13 @@
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Folder, File, Download, Trash2, Loader2 } from 'lucide-react'
 import { useFileManagerContext } from '@/context/FileManagerContext'
 import type { FileItem } from '@/types/file'
 
 export function FileList() {
-  const { files, loading, loadDir, openFile, deleteItem, formatSize, formatDate } = useFileManagerContext()
+  const { files, loading, loadDir, openFile, deleteItem, formatSize, formatDate, selectedFiles, toggleSelectFile, selectAllFiles, addToDeleteList } = useFileManagerContext()
 
   if (loading) {
     return (
@@ -32,6 +33,13 @@ export function FileList() {
       <Table>
         <TableHeader>
           <TableRow className="text-xs font-semibold uppercase tracking-wider">
+            <TableHead className="py-3 px-6 w-12">
+              <Checkbox
+                checked={selectedFiles.length === files.length && files.length > 0}
+                onCheckedChange={selectAllFiles}
+                aria-label="Select all files"
+              />
+            </TableHead>
             <TableHead className="py-3 px-6">Name</TableHead>
             <TableHead className="py-3 px-6">Size</TableHead>
             <TableHead className="py-3 px-6">Permissions</TableHead>
@@ -42,6 +50,13 @@ export function FileList() {
         <TableBody className="divide-y divide-gray-700 text-sm">
           {files.map((file: FileItem) => (
             <TableRow key={file.path} className="hover:bg-gray-700/50 transition">
+              <TableCell className="py-3 px-6 w-12">
+                <Checkbox
+                  checked={selectedFiles.includes(file.path)}
+                  onCheckedChange={() => toggleSelectFile(file.path)}
+                  aria-label={`Select ${file.name}`}
+                />
+              </TableCell>
               <TableCell className="py-3 px-6">
                 <div className="flex items-center space-x-3">
                   {file.isDir ? (
@@ -101,6 +116,14 @@ export function FileList() {
           ))}
         </TableBody>
       </Table>
+      {selectedFiles.length > 0 && (
+        <div className="fixed bottom-4 right-4 bg-card border border-border rounded-lg shadow-lg p-4 flex items-center space-x-2 z-50">
+          <span className="text-sm text-gray-300">{selectedFiles.length} selected</span>
+          <Button size="sm" variant="outline" onClick={addToDeleteList}>
+            Add to Delete List
+          </Button>
+        </div>
+      )}
     </TooltipProvider>
   )
 }

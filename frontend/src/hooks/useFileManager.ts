@@ -36,8 +36,11 @@ export function useFileManager() {
     newFolderName: '',
     showEditorModal: false,
     showMediaModal: false,
+    showDeleteListModal: false,
     currentFile: null,
     fileContent: '',
+    selectedFiles: [],
+    pendingDeletions: [],
   })
 
   const updateBreadcrumbs = useCallback((path: string) => {
@@ -116,6 +119,76 @@ export function useFileManager() {
       console.error(e)
     }
   }, [state.currentPath, loadDir])
+
+  const toggleSelectFile = useCallback((path: string) => {
+    setState(prev => ({
+      ...prev,
+      selectedFiles: prev.selectedFiles.includes(path)
+        ? prev.selectedFiles.filter(p => p !== path)
+        : [...prev.selectedFiles, path]
+    }))
+  }, [])
+
+  const selectAllFiles = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      selectedFiles: prev.selectedFiles.length === prev.files.length
+        ? []
+        : prev.files.map(f => f.path)
+    }))
+  }, [])
+
+  const clearSelection = useCallback(() => {
+    setState(prev => ({ ...prev, selectedFiles: [] }))
+  }, [])
+
+  const addToDeleteList = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      pendingDeletions: [...new Set([...prev.pendingDeletions, ...prev.selectedFiles])],
+      selectedFiles: [],
+    }))
+  }, [])
+
+  const removeFromDeleteList = useCallback((path: string) => {
+    setState(prev => ({
+      ...prev,
+      pendingDeletions: prev.pendingDeletions.filter(p => p !== path)
+    }))
+  }, [])
+
+  const clearDeleteList = useCallback(() => {
+    setState(prev => ({ ...prev, pendingDeletions: [] }))
+  }, [])
+
+  const confirmDeleteAll = useCallback(async () => {
+    if (state.pendingDeletions.length === 0) return
+
+    try {
+      for (const path of state.pendingDeletions) {
+        const res = await fetch(`${API_BASE}/api/delete?path=${encodeURIComponent(path)}`, {
+          method: 'DELETE'
+        })
+        if (!res.ok) {
+          alert(`Failed to delete ${path}`)
+          return
+        }
+      }
+      setState(prev => ({ ...prev, pendingDeletions: [] }))
+      loadDir(state.currentPath)
+    } catch (e) {
+      console.error(e)
+      alert('Network error during deletion')
+    }
+  }, [state.pendingDeletions, state.currentPath, loadDir])
+
+  const openDeleteListModal = useCallback(() => {
+    setState(prev => ({ ...prev, showDeleteListModal: true }))
+  }, [])
+
+  const closeDeleteListModal = useCallback(() => {
+    setState(prev => ({ ...prev, showDeleteListModal: false }))
+  }, [])
 
   const uploadFiles = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
@@ -219,5 +292,14 @@ export function useFileManager() {
     setFileContent: (content: string) => setState(prev => ({ ...prev, fileContent: content })),
     closeMkdirModal: () => setState(prev => ({ ...prev, showMkdirModal: false })),
     closeEditorModal: () => setState(prev => ({ ...prev, showEditorModal: false })),
+    toggleSelectFile,
+    selectAllFiles,
+    clearSelection,
+    addToDeleteList,
+    removeFromDeleteList,
+    clearDeleteList,
+    confirmDeleteAll,
+    openDeleteListModal,
+    closeDeleteListModal,
   }
 }
