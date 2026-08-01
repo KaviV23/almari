@@ -45,9 +45,9 @@ export function FileList() {
               <TableCell className="py-3 px-6">
                 <div className="flex items-center space-x-3">
                   {file.isDir ? (
-                    <Folder className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                    <Folder className="w-5 h-5 text-amber-400 shrink-0" />
                   ) : (
-                    <File className="w-5 h-5 text-indigo-400 flex-shrink-0" />
+                    <File className="w-5 h-5 text-indigo-400 shrink-0" />
                   )}
                   <Button
                     variant="ghost"

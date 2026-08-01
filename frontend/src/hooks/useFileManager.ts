@@ -143,18 +143,6 @@ export function useFileManager() {
     event.target.value = ''
   }, [state.currentPath, loadDir])
 
-  const openFile = useCallback((file: FileItem) => {
-    setState(prev => ({ ...prev, currentFile: file }))
-    const isImg = isImage(file.name)
-    const isVid = isVideo(file.name)
-
-    if (isImg || isVid) {
-      setState(prev => ({ ...prev, showMediaModal: true }))
-    } else {
-      loadTextFile(file)
-    }
-  }, [])
-
   const loadTextFile = useCallback(async (file: FileItem) => {
     try {
       const res = await fetch(`${API_BASE}/api/read?path=${encodeURIComponent(file.path)}`)
@@ -168,6 +156,18 @@ export function useFileManager() {
       console.error(e)
     }
   }, [])
+
+  const openFile = useCallback((file: FileItem) => {
+    setState(prev => ({ ...prev, currentFile: file }))
+    const isImg = isImage(file.name)
+    const isVid = isVideo(file.name)
+
+    if (isImg || isVid) {
+      setState(prev => ({ ...prev, showMediaModal: true }))
+    } else {
+      loadTextFile(file)
+    }
+  }, [loadTextFile])
 
   const closeMediaModal = useCallback(() => {
     setState(prev => ({ ...prev, showMediaModal: false }))

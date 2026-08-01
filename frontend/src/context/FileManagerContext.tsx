@@ -1,3 +1,4 @@
+/* eslint-disable react/only-export-components */
 import React, { createContext, useContext } from 'react'
 import { useFileManager } from '@/hooks/useFileManager'
 
