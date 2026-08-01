@@ -2,8 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Trash2, X, Loader2 } from 'lucide-react'
+import { Trash2, X, Loader2, Folder, File, Image, Video } from 'lucide-react'
 import { useFileManagerContext } from '@/context/FileManagerContext'
 
 export function DeleteListModal() {
@@ -13,7 +12,9 @@ export function DeleteListModal() {
     removeFromDeleteList, 
     confirmDeleteAll,
     loading,
-    closeDeleteListModal
+    closeDeleteListModal,
+    isImage,
+    isVideo
   } = useFileManagerContext()
 
   if (!showDeleteListModal) {
@@ -38,22 +39,39 @@ export function DeleteListModal() {
               No items in delete list
             </div>
           ) : (
-            pendingDeletions.map((path) => (
-              <div key={path} className="flex items-center space-x-3 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
-                <Checkbox
-                  checked={true}
-                  disabled
-                  className="text-red-500"
-                />
-                <span className="flex-1 text-sm font-mono text-gray-300 truncate" title={path}>
-                  {path}
-                </span>
+            pendingDeletions.map((file) => (
+              <div key={file.path} className="flex items-center space-x-3 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+                <div className="w-12 h-12 shrink-0 bg-gray-900 rounded flex items-center justify-center overflow-hidden relative">
+                  {file.hasThumb ? (
+                    <img
+                      src={`${import.meta.env.VITE_API_BASE || ''}/api/thumbnail?path=${encodeURIComponent(file.path)}`}
+                      className="w-full h-full object-cover"
+                      alt={file.name}
+                    />
+                  ) : file.isDir ? (
+                    <Folder className="w-6 h-6 text-amber-400" />
+                  ) : isImage(file.name) ? (
+                    <Image className="w-6 h-6 text-indigo-400" />
+                  ) : isVideo(file.name) ? (
+                    <Video className="w-6 h-6 text-indigo-400" />
+                  ) : (
+                    <File className="w-6 h-6 text-indigo-400" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-200 truncate" title={file.name}>
+                    {file.name}
+                  </p>
+                  <p className="text-xs font-mono text-gray-500 truncate" title={file.path}>
+                    {file.path}
+                  </p>
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="text-gray-400 hover:text-red-400"
-                  onClick={() => removeFromDeleteList(path)}
-                  aria-label={`Remove ${path} from delete list`}
+                  onClick={() => removeFromDeleteList(file.path)}
+                  aria-label={`Remove ${file.name} from delete list`}
                 >
                   <X className="w-4 h-4" />
                 </Button>

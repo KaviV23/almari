@@ -143,17 +143,22 @@ export function useFileManager() {
   }, [])
 
   const addToDeleteList = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      pendingDeletions: [...new Set([...prev.pendingDeletions, ...prev.selectedFiles])],
-      selectedFiles: [],
-    }))
+    setState(prev => {
+      const selectedFileItems = prev.files.filter(f => prev.selectedFiles.includes(f.path))
+      const existingPaths = new Set(prev.pendingDeletions.map(f => f.path))
+      const newItems = selectedFileItems.filter(f => !existingPaths.has(f.path))
+      return {
+        ...prev,
+        pendingDeletions: [...prev.pendingDeletions, ...newItems],
+        selectedFiles: [],
+      }
+    })
   }, [])
 
   const removeFromDeleteList = useCallback((path: string) => {
     setState(prev => ({
       ...prev,
-      pendingDeletions: prev.pendingDeletions.filter(p => p !== path)
+      pendingDeletions: prev.pendingDeletions.filter(f => f.path !== path)
     }))
   }, [])
 
@@ -165,12 +170,12 @@ export function useFileManager() {
     if (state.pendingDeletions.length === 0) return
 
     try {
-      for (const path of state.pendingDeletions) {
-        const res = await fetch(`${API_BASE}/api/delete?path=${encodeURIComponent(path)}`, {
+      for (const file of state.pendingDeletions) {
+        const res = await fetch(`${API_BASE}/api/delete?path=${encodeURIComponent(file.path)}`, {
           method: 'DELETE'
         })
         if (!res.ok) {
-          alert(`Failed to delete ${path}`)
+          alert(`Failed to delete ${file.path}`)
           return
         }
       }

@@ -22,5 +22,5 @@ export interface FileManagerState {
   currentFile: FileItem | null
   fileContent: string
   selectedFiles: string[]
-  pendingDeletions: string[]
+  pendingDeletions: FileItem[]
 }
