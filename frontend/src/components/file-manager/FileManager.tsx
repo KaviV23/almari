@@ -11,11 +11,11 @@ function FileManagerContent() {
   const { viewMode } = useFileManagerContext()
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Header />
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 flex flex-col space-y-4">
         <Breadcrumbs />
-        <div className="bg-gray-800 border border-gray-700 rounded-xl shadow overflow-hidden flex-1 flex flex-col">
+        <div className="bg-card border border-border rounded-xl shadow overflow-hidden flex-1 flex flex-col">
           {viewMode === 'list' ? (
             <div className="overflow-x-auto flex-1">
               <FileList />

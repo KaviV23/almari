@@ -21,7 +21,7 @@ export function EditorModal() {
         <Textarea
           value={fileContent}
           onChange={(e) => setFileContent(e.target.value)}
-          className="flex-1 w-full font-mono text-sm min-h-[400px]"
+          className="flex-1 w-full font-mono text-sm min-h-100"
           spellCheck={false}
         />
         <DialogFooter>

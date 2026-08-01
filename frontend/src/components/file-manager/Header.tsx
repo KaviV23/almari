@@ -8,22 +8,22 @@ export function Header() {
   const { openMkdirModal, uploadFiles } = useFileManagerContext()
 
   return (
-    <header className="bg-gray-800 border-b border-gray-700 px-6 py-4 flex items-center justify-between shadow-md">
+    <header className="bg-background border-b border-border p-2 flex items-center justify-between shadow-md">
       <div className="flex items-center space-x-3">
-        <div className="bg-indigo-600 p-2 rounded-lg text-white">
+        <div className="bg-accent p-2 rounded-lg text-accent-foreground">
           <HardDrive className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white">Almari</h1>
-          <p className="text-xs text-gray-400">Remote Filesystem Manager</p>
+          <h1 className="text-md font-bold tracking-tight text-foreground">Almari</h1>
+          <p className="text-xs text-muted-foreground">Remote Filesystem Manager</p>
         </div>
       </div>
       <div className="flex items-center space-x-3">
-        <Button onClick={openMkdirModal} className="bg-indigo-600 hover:bg-indigo-700">
-          <FolderPlus className="w-4 h-4 mr-2" />
+        <Button onClick={openMkdirModal} size={"sm"}>
+          <FolderPlus className="w-4 h-4" />
           New Folder
         </Button>
-        <Label className="flex items-center space-x-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer shadow">
+        <Label className="flex items-center space-x-2 bg-secondary hover:bg-border text-secondary-foreground px-3 h-9 rounded-md text-sm font-medium transition cursor-pointer shadow">
           <Upload className="w-4 h-4" />
           <span>Upload Files</span>
           <Input type="file" multiple onChange={uploadFiles} className="hidden" />
