@@ -10,8 +10,8 @@ export function FileGrid() {
   if (loading) {
     return (
       <TooltipProvider>
-        <div className="flex justify-center items-center h-full">
-          <Loader2 className="w-5 h-5 animate-spin text-indigo-500 mr-2" />
+        <div className="flex justify-center items-center h-full p-10">
+          <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
           <span>Loading directory contents...</span>
         </div>
       </TooltipProvider>
@@ -32,9 +32,9 @@ export function FileGrid() {
         {files.map((file: FileItem) => (
           <div
             key={file.path}
-            className="bg-gray-900/40 border border-gray-700 rounded-xl p-3 flex flex-col items-center space-y-2 hover:border-indigo-500 transition relative group"
+            className="bg-card border border-border rounded p-2 flex flex-col items-center space-y-2 hover:border-indigo-500 transition relative group"
           >
-            <div className="w-full h-28 bg-gray-900 rounded-lg flex items-center justify-center overflow-hidden relative">
+            <div className="w-full h-28 bg-gray-800 rounded flex items-center justify-center overflow-hidden relative">
               {file.hasThumb ? (
                 <img
                   src={`${import.meta.env.VITE_API_BASE || ''}/api/thumbnail?path=${encodeURIComponent(file.path)}`}

@@ -7,7 +7,7 @@
   --muted-foreground: #a1a1a1;
   --border: #2e2e2e;
   --ring: #4f46e5;
-  --primary: #4f46e5;
+  --primary: rgb(74,59,241);
   --primary-foreground: #ffffff;
   --secondary: #1a1a1a;
   --secondary-foreground: #ededed;

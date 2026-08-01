@@ -15,7 +15,7 @@ export function MkdirModal() {
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="folder-name">Folder name</Label>
+            <div><Label htmlFor="folder-name">Folder name</Label></div>
             <Input
               id="folder-name"
               placeholder="Folder name"

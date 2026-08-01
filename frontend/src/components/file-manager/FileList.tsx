@@ -11,8 +11,8 @@ export function FileList() {
   if (loading) {
     return (
       <TooltipProvider>
-        <div className="flex justify-center items-center h-full">
-          <Loader2 className="w-5 h-5 animate-spin text-indigo-500 mr-2" />
+        <div className="flex justify-center items-center h-full p-10">
+          <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
           <span>Loading directory contents...</span>
         </div>
       </TooltipProvider>
@@ -31,7 +31,7 @@ export function FileList() {
     <TooltipProvider>
       <Table>
         <TableHeader>
-          <TableRow className="bg-gray-750 border-b border-gray-700 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          <TableRow className="text-xs font-semibold uppercase tracking-wider">
             <TableHead className="py-3 px-6">Name</TableHead>
             <TableHead className="py-3 px-6">Size</TableHead>
             <TableHead className="py-3 px-6">Permissions</TableHead>

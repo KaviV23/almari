@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { ChevronRight } from "lucide-react"
 
 export interface BreadcrumbProps extends React.HTMLAttributes<HTMLElement> {}
 
@@ -68,9 +69,7 @@ const BreadcrumbSeparator = ({ className, ...props }: React.HTMLAttributes<HTMLE
     className={cn("flex h-4 w-4 items-center justify-center text-muted-foreground", className)}
     {...props}
   >
-    <svg width="4" height="4" viewBox="0 0 4 4" fill="currentColor">
-      <circle cx="2" cy="2" r="1" />
-    </svg>
+    <ChevronRight />
   </span>
 )
 BreadcrumbSeparator.displayName = "BreadcrumbSeparator"
