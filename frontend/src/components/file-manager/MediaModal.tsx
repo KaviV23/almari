@@ -11,6 +11,9 @@ export function MediaModal() {
   const apiBase = import.meta.env.VITE_API_BASE || ''
   const fileUrl = `${apiBase}/api/download?path=${encodeURIComponent(currentFile.path)}`
 
+  // Only show for images/videos
+  if (!isImage(currentFile.name) && !isVideo(currentFile.name)) return null
+
   return (
     <Dialog open={showMediaModal} onOpenChange={closeMediaModal}>
       <DialogContent className="max-w-5xl max-h-[90vh]">

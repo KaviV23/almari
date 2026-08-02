@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { Trash2, X, Loader2, Folder, File, Image, Video } from 'lucide-react'
+import { Trash2, X, Loader2, Folder, File, Image, Video, Eye } from 'lucide-react'
 import { useFileManagerContext } from '@/context/FileManagerContext'
 
 export function DeleteListModal() {
@@ -14,7 +14,9 @@ export function DeleteListModal() {
     loading,
     closeDeleteListModal,
     isImage,
-    isVideo
+    isVideo,
+    openPreview,
+    previewLoading
   } = useFileManagerContext()
 
   if (!showDeleteListModal) {
@@ -66,6 +68,18 @@ export function DeleteListModal() {
                     {file.path}
                   </p>
                 </div>
+                {!file.isDir && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-gray-400 hover:text-indigo-400"
+                    onClick={() => openPreview(file)}
+                    disabled={previewLoading}
+                    aria-label={`Preview ${file.name}`}
+                  >
+                    {previewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"

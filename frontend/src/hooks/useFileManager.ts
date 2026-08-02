@@ -37,10 +37,14 @@ export function useFileManager() {
     showEditorModal: false,
     showMediaModal: false,
     showDeleteListModal: false,
+    showPreviewModal: false,
     currentFile: null,
     fileContent: '',
     selectedFiles: [],
     pendingDeletions: [],
+    previewFile: null,
+    previewContent: '',
+    previewLoading: false,
   })
 
   const updateBreadcrumbs = useCallback((path: string) => {
@@ -195,6 +199,29 @@ export function useFileManager() {
     setState(prev => ({ ...prev, showDeleteListModal: false }))
   }, [])
 
+  const openPreview = useCallback(async (file: FileItem) => {
+    if (file.isDir) return
+    setState(prev => ({ ...prev, previewLoading: true, previewFile: file }))
+    try {
+      const res = await fetch(`${API_BASE}/api/read?path=${encodeURIComponent(file.path)}`)
+      if (res.ok) {
+        const content = await res.text()
+        setState(prev => ({ ...prev, previewContent: content, previewLoading: false, showPreviewModal: true }))
+      } else {
+        alert('Failed to load preview')
+        setState(prev => ({ ...prev, previewLoading: false, previewFile: null }))
+      }
+    } catch (e) {
+      console.error(e)
+      alert('Network error')
+      setState(prev => ({ ...prev, previewLoading: false, previewFile: null }))
+    }
+  }, [])
+
+  const closePreview = useCallback(() => {
+    setState(prev => ({ ...prev, previewFile: null, previewContent: '', showPreviewModal: false }))
+  }, [])
+
   const uploadFiles = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (!files?.length) return
@@ -248,7 +275,7 @@ export function useFileManager() {
   }, [loadTextFile])
 
   const closeMediaModal = useCallback(() => {
-    setState(prev => ({ ...prev, showMediaModal: false }))
+    setState(prev => ({ ...prev, showMediaModal: false, currentFile: null }))
   }, [])
 
   const saveFile = useCallback(async () => {
@@ -296,7 +323,7 @@ export function useFileManager() {
     setNewFolderName: (name: string) => setState(prev => ({ ...prev, newFolderName: name })),
     setFileContent: (content: string) => setState(prev => ({ ...prev, fileContent: content })),
     closeMkdirModal: () => setState(prev => ({ ...prev, showMkdirModal: false })),
-    closeEditorModal: () => setState(prev => ({ ...prev, showEditorModal: false })),
+    closeEditorModal: () => setState(prev => ({ ...prev, showEditorModal: false, currentFile: null })),
     toggleSelectFile,
     selectAllFiles,
     clearSelection,
@@ -306,5 +333,7 @@ export function useFileManager() {
     confirmDeleteAll,
     openDeleteListModal,
     closeDeleteListModal,
+    openPreview,
+    closePreview,
   }
 }

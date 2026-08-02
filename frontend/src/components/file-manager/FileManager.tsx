@@ -6,6 +6,7 @@ import { MkdirModal } from './MkdirModal'
 import { EditorModal } from './EditorModal'
 import { MediaModal } from './MediaModal'
 import { DeleteListModal } from './DeleteListModal'
+import { PreviewModal } from './PreviewModal'
 import { FileManagerProvider, useFileManagerContext } from '@/context/FileManagerContext'
 
 function FileManagerContent() {
@@ -30,6 +31,7 @@ function FileManagerContent() {
       <EditorModal />
       <MediaModal />
       <DeleteListModal />
+      <PreviewModal />
     </div>
   )
 }

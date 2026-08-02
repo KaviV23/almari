@@ -19,8 +19,12 @@ export interface FileManagerState {
   showEditorModal: boolean
   showMediaModal: boolean
   showDeleteListModal: boolean
+  showPreviewModal: boolean
   currentFile: FileItem | null
   fileContent: string
   selectedFiles: string[]
   pendingDeletions: FileItem[]
+  previewFile: FileItem | null
+  previewContent: string
+  previewLoading: boolean
 }
