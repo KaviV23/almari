@@ -36,8 +36,15 @@ export function useFileManager() {
     newFolderName: '',
     showEditorModal: false,
     showMediaModal: false,
+    showDeleteListModal: false,
+    showPreviewModal: false,
     currentFile: null,
     fileContent: '',
+    selectedFiles: [],
+    pendingDeletions: [],
+    previewFile: null,
+    previewContent: '',
+    previewLoading: false,
   })
 
   const updateBreadcrumbs = useCallback((path: string) => {
@@ -117,6 +124,104 @@ export function useFileManager() {
     }
   }, [state.currentPath, loadDir])
 
+  const toggleSelectFile = useCallback((path: string) => {
+    setState(prev => ({
+      ...prev,
+      selectedFiles: prev.selectedFiles.includes(path)
+        ? prev.selectedFiles.filter(p => p !== path)
+        : [...prev.selectedFiles, path]
+    }))
+  }, [])
+
+  const selectAllFiles = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      selectedFiles: prev.selectedFiles.length === prev.files.length
+        ? []
+        : prev.files.map(f => f.path)
+    }))
+  }, [])
+
+  const clearSelection = useCallback(() => {
+    setState(prev => ({ ...prev, selectedFiles: [] }))
+  }, [])
+
+  const addToDeleteList = useCallback(() => {
+    setState(prev => {
+      const selectedFileItems = prev.files.filter(f => prev.selectedFiles.includes(f.path))
+      const existingPaths = new Set(prev.pendingDeletions.map(f => f.path))
+      const newItems = selectedFileItems.filter(f => !existingPaths.has(f.path))
+      return {
+        ...prev,
+        pendingDeletions: [...prev.pendingDeletions, ...newItems],
+        selectedFiles: [],
+      }
+    })
+  }, [])
+
+  const removeFromDeleteList = useCallback((path: string) => {
+    setState(prev => ({
+      ...prev,
+      pendingDeletions: prev.pendingDeletions.filter(f => f.path !== path)
+    }))
+  }, [])
+
+  const clearDeleteList = useCallback(() => {
+    setState(prev => ({ ...prev, pendingDeletions: [] }))
+  }, [])
+
+  const confirmDeleteAll = useCallback(async () => {
+    if (state.pendingDeletions.length === 0) return
+
+    try {
+      for (const file of state.pendingDeletions) {
+        const res = await fetch(`${API_BASE}/api/delete?path=${encodeURIComponent(file.path)}`, {
+          method: 'DELETE'
+        })
+        if (!res.ok) {
+          alert(`Failed to delete ${file.path}`)
+          return
+        }
+      }
+      setState(prev => ({ ...prev, pendingDeletions: [] }))
+      loadDir(state.currentPath)
+    } catch (e) {
+      console.error(e)
+      alert('Network error during deletion')
+    }
+  }, [state.pendingDeletions, state.currentPath, loadDir])
+
+  const openDeleteListModal = useCallback(() => {
+    setState(prev => ({ ...prev, showDeleteListModal: true }))
+  }, [])
+
+  const closeDeleteListModal = useCallback(() => {
+    setState(prev => ({ ...prev, showDeleteListModal: false }))
+  }, [])
+
+  const openPreview = useCallback(async (file: FileItem) => {
+    if (file.isDir) return
+    setState(prev => ({ ...prev, previewLoading: true, previewFile: file }))
+    try {
+      const res = await fetch(`${API_BASE}/api/read?path=${encodeURIComponent(file.path)}`)
+      if (res.ok) {
+        const content = await res.text()
+        setState(prev => ({ ...prev, previewContent: content, previewLoading: false, showPreviewModal: true }))
+      } else {
+        alert('Failed to load preview')
+        setState(prev => ({ ...prev, previewLoading: false, previewFile: null }))
+      }
+    } catch (e) {
+      console.error(e)
+      alert('Network error')
+      setState(prev => ({ ...prev, previewLoading: false, previewFile: null }))
+    }
+  }, [])
+
+  const closePreview = useCallback(() => {
+    setState(prev => ({ ...prev, previewFile: null, previewContent: '', showPreviewModal: false }))
+  }, [])
+
   const uploadFiles = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (!files?.length) return
@@ -170,7 +275,7 @@ export function useFileManager() {
   }, [loadTextFile])
 
   const closeMediaModal = useCallback(() => {
-    setState(prev => ({ ...prev, showMediaModal: false }))
+    setState(prev => ({ ...prev, showMediaModal: false, currentFile: null }))
   }, [])
 
   const saveFile = useCallback(async () => {
@@ -218,6 +323,17 @@ export function useFileManager() {
     setNewFolderName: (name: string) => setState(prev => ({ ...prev, newFolderName: name })),
     setFileContent: (content: string) => setState(prev => ({ ...prev, fileContent: content })),
     closeMkdirModal: () => setState(prev => ({ ...prev, showMkdirModal: false })),
-    closeEditorModal: () => setState(prev => ({ ...prev, showEditorModal: false })),
+    closeEditorModal: () => setState(prev => ({ ...prev, showEditorModal: false, currentFile: null })),
+    toggleSelectFile,
+    selectAllFiles,
+    clearSelection,
+    addToDeleteList,
+    removeFromDeleteList,
+    clearDeleteList,
+    confirmDeleteAll,
+    openDeleteListModal,
+    closeDeleteListModal,
+    openPreview,
+    closePreview,
   }
 }

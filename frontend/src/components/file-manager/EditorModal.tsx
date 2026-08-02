@@ -5,9 +5,12 @@ import { X } from 'lucide-react'
 import { useFileManagerContext } from '@/context/FileManagerContext'
 
 export function EditorModal() {
-  const { showEditorModal, currentFile, fileContent, setFileContent, saveFile, closeEditorModal } = useFileManagerContext()
+  const { showEditorModal, currentFile, fileContent, setFileContent, saveFile, closeEditorModal, isImage, isVideo } = useFileManagerContext()
 
-  if (!currentFile) return null
+  if (!currentFile || !showEditorModal) return null
+
+  // Don't show editor for images/videos - they use MediaModal
+  if (isImage(currentFile.name) || isVideo(currentFile.name)) return null
 
   return (
     <Dialog open={showEditorModal} onOpenChange={closeEditorModal}>
